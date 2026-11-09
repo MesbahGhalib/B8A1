@@ -1,44 +1,40 @@
-# Keeping Response Types with Generics and Promises
+# Using Generics with Promises
 
 ## Introduction
 
-A helper that handles several kinds of data should preserve the type it receives. Generics let us express that relationship once. A type parameter such as `T` represents a type chosen for a particular call.
+Suppose a function returns the first item from an array. Writing separate functions for names and scores would repeat the same code. A generic function handles both while keeping its return type connected to the array's element type.
 
-## Carrying a type through a function
+## Keeping the item type
 
-This helper wraps a value in an object without losing its type.
-
-```typescript
-function wrapValue<T>(value: T): { data: T } {
-  return { data: value };
-}
-
-const wrappedScore = wrapValue(92);
-const wrappedName = wrapValue("Nadia");
-```
-
-TypeScript infers `number` for the first call and `string` for the second. Consequently, `wrappedScore.data.toFixed(1)` is valid, while `wrappedName.data.toFixed(1)` is rejected. Inside the helper, operations must be valid for every allowed `T`. A constraint can limit those possibilities when specific properties are required. The [generics guide](https://www.typescriptlang.org/docs/handbook/2/generics.html) explains inference and constraints.
-
-## Preserving asynchronous results
-
-The same relationship applies when a value arrives later.
+Here is a function that works with different arrays:
 
 ```typescript
-async function wrapResponse<T>(response: Promise<T>): Promise<{ data: T }> {
-  const data: T = await response;
-  return { data };
-}
-
-async function readScore(): Promise<number> {
-  const result = await wrapResponse(Promise.resolve(92));
-  return result.data;
+function firstItem<T>(items: T[]): T | undefined {
+  return items[0];
 }
 ```
 
-`Promise<T>` describes the fulfillment value. Awaiting the response exposes `T`, and the wrapper preserves it inside `data`. Async return annotations use `Promise`, as shown in the [function return type documentation](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#return-type-annotations).
+`T` represents the element type. Passing `["Rakib", "Sadia"]` makes it `string`; passing `[80, 95]` makes it `number`. TypeScript infers this from the argument. The return type includes `undefined` because an empty array has no first item. A caller must check for that before using a string or number method.
 
-A rejected input also rejects `wrapResponse`; its type parameter does not specify an error type. Generics provide compile-time checks, not runtime validation. Data from a server still needs checking before it can be trusted as a declared type.
+## Waiting for an array
+
+The array may also come from a promise. We can keep the same type relationship after waiting for it.
+
+```typescript
+async function firstResult<T>(response: Promise<T[]>): Promise<T | undefined> {
+  const items: T[] = await response;
+  return firstItem(items);
+}
+
+async function readFirstName(): Promise<string | undefined> {
+  return firstResult(Promise.resolve(["Rakib", "Sadia"]));
+}
+```
+
+`Promise<T[]>` describes a promise that resolves to an array of `T`. After `await`, `items` has type `T[]`. In `readFirstName`, the resolved result is a string or `undefined`.
+
+If the input promise rejects, `firstResult` rejects too. `Promise<T>` describes success values, not the rejection type. It also does not validate server data at runtime; that needs a separate check.
 
 ## Conclusion
 
-Generics connect inputs and outputs. Combining them with promises keeps that connection through an asynchronous operation, so callers can use the resolved data correctly.
+Generics suit functions where the steps stay the same but the data type changes. With promises, they preserve the result type after `await`, including the possibility of an empty result.
