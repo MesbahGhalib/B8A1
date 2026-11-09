@@ -1,26 +1,28 @@
-# Type Narrowing: Checking a Value Before Using It
+# Type Narrowing in TypeScript
 
 ## Introduction
 
-A union type gives a variable several possible types. Before calling a method that belongs to just one of them, we need evidence about the current value. Type narrowing lets TypeScript use our checks to identify which operations are safe.
+A price might arrive as a number or as text. We cannot call a number method on both. Type narrowing means checking a value so TypeScript can work out which type it has in that part of the code.
 
 ## Checking primitive values
 
-The `typeof` operator works well for strings, numbers, and booleans. Here, the string branch permits `toUpperCase()`. After that branch returns, the remaining value must be a number.
+The `typeof` operator checks primitive types. In this function, a string gets trimmed, while a number gets two decimal places.
 
 ```typescript
 function formatPrice(value: string | number): string {
   if (typeof value === "string") {
-    return value.toUpperCase();
+    return value.trim();
   }
 
   return value.toFixed(2);
 }
 ```
 
+After the string branch returns, TypeScript knows that the remaining value is a number. That makes `toFixed()` safe to call.
+
 ## Checking objects
 
-For class instances, `instanceof` checks the constructor's prototype against the object's prototype chain. An error message can therefore come from either an `Error` instance or a plain string.
+With `instanceof`, we can check for a class instance. Here, an `Error` has a `message` property, but a string can be returned directly.
 
 ```typescript
 function failureMessage(failure: Error | string): string {
@@ -32,7 +34,7 @@ function failureMessage(failure: Error | string): string {
 }
 ```
 
-The `in` operator checks whether a property exists, including inherited properties. It helps distinguish objects with different required fields. Optional fields can occur on both sides of this check, so they need more care.
+The `in` operator checks for a property. A delivery has either a tracking number or a pickup point, so checking `trackingId` tells us which field to read.
 
 ```typescript
 type Delivery = { trackingId: string } | { pickupPoint: string };
@@ -46,8 +48,8 @@ function deliveryLabel(delivery: Delivery): string {
 }
 ```
 
-These checks guide TypeScript's analysis of each branch; they do not convert the value. See the [TypeScript narrowing guide](https://www.typescriptlang.org/docs/handbook/2/narrowing.html).
+This check includes inherited properties. Optional properties need more care: a missing property does not necessarily rule out a type that declares it as optional.
 
 ## Conclusion
 
-Choose a check that matches the data: `typeof` for primitives, `instanceof` for class instances, and `in` for object properties.
+Narrowing lets a function handle different inputs without guessing their types. The checks do not change the value; they help TypeScript understand it before a method or property is used.
